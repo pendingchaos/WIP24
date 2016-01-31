@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<screensaver name="wip24" _label="WIP24" gl="yes">
+    <command arg="-root"/>
+    <number id="delay" type="slider" arg="-delay %" _label="Frametime"
+            _low-label="Low" _high-label="High" low="0" high="100000"
+            default="33333"/>
+    <boolean id="showfps" _label="Show frame rate" arg-set="-fps"/>
+    <number id="undersampleMax" type="slider" arg="-undersampleMax %"
+            _label="Undersample Maximum" _low-label="None"
+            _high-label="64x" low="0" high="64"
+            default="16"/>
+    <number id="shaderDuration" arg="-shaderDuration %" default="300"
+            _label="Shader Duration (seconds)"/>
+    <xscreensaver-updater/>
+    <_description>Shadertoy screensaver that displays awesomensss.</_description>
+</screensaver>
