@@ -49,10 +49,7 @@ typedef struct {
     char shader_author[256];
 } wip24_state;
 
-static const char* source_header = "#ifndef GL_OES_standard_derivatives\n"
-                                   "#define GL_OES_standard_derivatives 1\n"
-                                   "#endif\n"
-                                   "uniform vec3 iResolution;\n" //Done
+static const char* source_header = "uniform vec3 iResolution;\n" //Done
                                    "uniform float iGlobalTime;\n" //Done
                                    "uniform float iChannelTime[4];\n" //Done
                                    "uniform vec4 iMouse;\n" //Done
