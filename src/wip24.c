@@ -65,7 +65,7 @@ static const char* source_header = "uniform vec3 iResolution;\n" //Done
                                    "uniform sampler2D iChannel2;\n" //Done
                                    "uniform sampler2D iChannel3;\n" //Done
                                    "void mainImage(out vec4 fragColor, in vec2 fragCoord);\n"
-                                   "#define texture2DLodEXT(sampler, p, lod) texture2DLod(sampler, p, lod)\n"
+                                   "#define texture2DLodEXT(sampler, p, lod) texture2D(sampler, p)\n"
                                    "#define texture2DGradEXT(sampler, p, dPdx, dPdy) texture2D(sampler, p)\n"
                                    "void main() {\n"
                                    "    gl_FragColor = vec4(vec3(0.0), 1.0);\n"
