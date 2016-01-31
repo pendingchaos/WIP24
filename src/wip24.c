@@ -537,7 +537,6 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
         states = calloc(1, state_count*sizeof(wip24_state));
         curl_global_init(CURL_GLOBAL_DEFAULT);
         log_entry("New process\n");
-        
     }
     
     log_entry("Begin initialization for screen %d\n", MI_SCREEN(mi));
@@ -550,8 +549,10 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
     state->font = load_texture_font(MI_DISPLAY(mi), "fpsFont");
     
     glXMakeCurrent(MI_DISPLAY(mi), MI_WINDOW(mi), *(state->glx_context));
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallbackARB((GLDEBUGPROCARB)gl_debug_callback, NULL);
+    if (strstr(glGetString(GL_EXTENSIONS), "GL_ARB_debug_output")) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glDebugMessageCallbackARB((GLDEBUGPROCARB)gl_debug_callback, NULL);
+    }
     glGenFramebuffers(1, &state->framebuffer);
     glGenTextures(1, &state->fb_texture);
     
