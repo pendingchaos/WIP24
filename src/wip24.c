@@ -196,23 +196,25 @@ static const char* pick_shader_id() {
     memset(ids, 0, 8*4096);
     size_t id_count = 0;
     while (id_count<4096) {
-        char* id = ids[id_count++];
+        static char id[8];
+        memset(id, 0, sizeof(id));
         int c;
         while ((c=fgetc(file))) {
             if (c == '\n') break;
             if (c == EOF) goto end;
             if (strlen(id)<7) id[strlen(id)] = c;
         }
+        
+        if (id[0] != '#')
+            strcpy(ids[id_count++], id);
     }
     end:
         ;
     fclose(file);
     
-    unsigned int start = ya_random();
-    for (unsigned int i = start; i < (start+id_count); i++)
-        if (ids[i%id_count][0] != '#')
-            return ids[i%id_count];
-    return NULL;
+    if (!id_count) return NULL;
+    
+    return ids[ya_random()%id_count];
 }
 
 static void load_texture(wip24_channel* channel, const char* src,
