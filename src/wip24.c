@@ -49,7 +49,9 @@ typedef struct {
     char shader_author[256];
 } wip24_state;
 
-static const char* source_header = "#extension GL_OES_standard_derivatives : enable\n"
+static const char* source_header = "#ifndef GL_OES_standard_derivatives\n"
+                                   "#define GL_OES_standard_derivatives 1\n"
+                                   "#endif\n"
                                    "uniform vec3 iResolution;\n" //Done
                                    "uniform float iGlobalTime;\n" //Done
                                    "uniform float iChannelTime[4];\n" //Done
@@ -66,6 +68,8 @@ static const char* source_header = "#extension GL_OES_standard_derivatives : ena
                                    "uniform sampler2D iChannel2;\n" //Done
                                    "uniform sampler2D iChannel3;\n" //Done
                                    "void mainImage(out vec4 fragColor, in vec2 fragCoord);\n"
+                                   "#define texture2DLodEXT texture2DLod\n"
+                                   "#define texture2DGradEXT texture2DGrad\n"
                                    "void main() {\n"
                                    "    gl_FragColor = vec4(vec3(0.0), 1.0);\n"
                                    "    mainImage(gl_FragColor, gl_FragCoord.xy);\n"
@@ -549,7 +553,7 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
     state->font = load_texture_font(MI_DISPLAY(mi), "fpsFont");
     
     glXMakeCurrent(MI_DISPLAY(mi), MI_WINDOW(mi), *(state->glx_context));
-    if (strstr(glGetString(GL_EXTENSIONS), "GL_ARB_debug_output")) {
+    if (strstr((const char*)glGetString(GL_EXTENSIONS), "GL_ARB_debug_output")) {
         glEnable(GL_DEBUG_OUTPUT);
         glDebugMessageCallbackARB((GLDEBUGPROCARB)gl_debug_callback, NULL);
     }
