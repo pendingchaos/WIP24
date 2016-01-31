@@ -295,9 +295,10 @@ static void set_shader_source(wip24_state* state, const char* source) {
     
     const char* sources[2] = {source_header, source};
     glShaderSource(frag, 2, sources, NULL);
+    glCompileShader(frag);
     GLint status;
     glGetShaderiv(frag, GL_COMPILE_STATUS, &status);
-    if (/*!status*/0) { /*TODO: For some reason this always results in true*/
+    if (!status) {
         char log[1024];
         glGetShaderInfoLog(frag, sizeof(log), NULL, log);
         log_entry("Error: Unable to compile shader: %s\n", log);
@@ -507,6 +508,12 @@ ENTRYPOINT Bool wip24_handle_event(ModeInfo *mi, XEvent *event) {
     return False; /*The event was not handled*/
 }
 
+static void gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
+                              GLsizei length, const char *message, const void *userParam)
+{
+    log_entry("OpenGL debug callback: %s\n", message);
+}
+
 static void init_shader(ModeInfo* mi, wip24_state* state) {
     state->start_time = get_time();
     state->time_delta = 0;
@@ -530,6 +537,7 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
         states = calloc(1, state_count*sizeof(wip24_state));
         curl_global_init(CURL_GLOBAL_DEFAULT);
         log_entry("New process\n");
+        
     }
     
     log_entry("Begin initialization for screen %d\n", MI_SCREEN(mi));
@@ -542,6 +550,8 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
     state->font = load_texture_font(MI_DISPLAY(mi), "fpsFont");
     
     glXMakeCurrent(MI_DISPLAY(mi), MI_WINDOW(mi), *(state->glx_context));
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallbackARB((GLDEBUGPROCARB)gl_debug_callback, NULL);
     glGenFramebuffers(1, &state->framebuffer);
     glGenTextures(1, &state->fb_texture);
     
@@ -637,9 +647,11 @@ ENTRYPOINT void draw_wip24(ModeInfo *mi) {
     glBindFramebuffer(GL_FRAMEBUFFER, state->framebuffer);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glViewport(0, 0, MI_WIDTH(mi)/state->undersample, MI_HEIGHT(mi)/state->undersample);
-    glUseProgram(state->program);
-    update_uniforms(mi, state);
-    glRectf(-1.0f, -1.0f, 1.0f, 1.0f);
+    if (state->program) {
+        glUseProgram(state->program);
+        update_uniforms(mi, state);
+        glRectf(-1.0f, -1.0f, 1.0f, 1.0f);
+    }
     
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, MI_WIDTH(mi), MI_HEIGHT(mi));
