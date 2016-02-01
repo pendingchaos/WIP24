@@ -71,7 +71,6 @@ static const char* source_header = "uniform vec3 iResolution;\n" //Done
                                    "}\n"
                                    "#line 1\n";
 static wip24_state *states = NULL;
-static unsigned int state_count = 0;
 static float undersample_max = 16.0f;
 static float shader_duration = 300.0f;
 static XrmOptionDescRec opts[] = {{"-undersampleMax", ".undersampleMax", XrmoptionSepArg, NULL},
@@ -88,11 +87,6 @@ static uint64_t get_time() {
     clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec*(uint64_t)1000000000 + t.tv_nsec;
 }
-
-typedef struct {
-    size_t data_size;
-    char* data;
-} write_callback_data;
 
 static const char* get_home_dir() {
     char* res = getenv("HOME");
@@ -121,7 +115,6 @@ static void log_entry(const char*format, ...) {
     va_start(list, format);
     va_copy(list2, list);
     
-    ensure_cache_dir();
     char filename[4096];
     snprintf(filename, sizeof(filename), "%s/.wip24/log.txt", get_home_dir());
     
@@ -137,6 +130,11 @@ static void log_entry(const char*format, ...) {
     va_end(list);
     vprintf(format, list2);
 }
+
+typedef struct {
+    size_t data_size;
+    char* data;
+} write_callback_data;
 
 static size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata) {
     write_callback_data* data = userdata;
@@ -179,31 +177,22 @@ static void read_data(const char* base_url, void** data, size_t* size) {
 }
 
 static const char* pick_shader_id() {
-    ensure_cache_dir();
-    
     char filename[4096];
     snprintf(filename, sizeof(filename), "%s/.wip24/shaders.txt", get_home_dir());
     FILE* file = fopen(filename, "r");
-    if (!file) {
-        fclose(fopen(filename, "w"));
-        return NULL;
-    }
+    if (!file) return NULL;
     
     static char ids[4096][8];
-    memset(ids, 0, 8*4096);
     size_t id_count = 0;
     while (id_count<4096) {
-        static char id[8];
-        memset(id, 0, sizeof(id));
+        char id[8] = {0};
         int c;
-        while ((c=fgetc(file))) {
-            if (c == '\n') break;
+        while ((c=fgetc(file)) != '\n') {
             if (c == EOF) goto end;
             if (strlen(id)<7) id[strlen(id)] = c;
         }
         
-        if (id[0] != '#')
-            strcpy(ids[id_count++], id);
+        if (id[0] != '#') strcpy(ids[id_count++], id);
     }
     end:
         ;
@@ -229,8 +218,6 @@ static void load_texture(wip24_channel* channel, const char* src,
         size_t img_data_size;
         read_data(url, &img_data, &img_data_size);
         if (!img_data) goto error;
-        
-        ensure_cache_dir();
         
         cached = fopen(cached_file, "wb");
         fwrite(img_data, img_data_size, 1, cached);
@@ -284,6 +271,7 @@ static void load_texture(wip24_channel* channel, const char* src,
 
 static void clear_shader(wip24_state* state) {
     glDeleteProgram(state->program);
+    state->program = 0;
     for (unsigned int i = 0; i < 4; i++) {
         glDeleteTextures(1, &state->channels[i].texture);
         state->channels[i].type = channel_none;
@@ -360,13 +348,11 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
     if (!renderpasses || !info) goto error;
     if (renderpasses->type != json_array) goto error;
     json_value* renderpass = NULL;
-    for (unsigned int i = 0; i < renderpasses->u.array.length; i++) {
+    for (unsigned int i = 0; (i<renderpasses->u.array.length)&&!renderpass; i++) {
         json_value* type = lookup_obj(renderpasses->u.array.values[i], "type");
         if (type && type->type==json_string)
-            if (!strcmp(type->u.string.ptr, "image")) {
+            if (!strcmp(type->u.string.ptr, "image"))
                 renderpass = renderpasses->u.array.values[i];
-                break;
-            }
     }
     if (!renderpass) goto error;
     
@@ -420,8 +406,7 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
     return;
     error:
         if (root) json_value_free(root);
-        glDeleteProgram(state->program);
-        state->program = 0;
+        clear_shader(state);
         log_entry("Unable to interpret JSON.\n");
 }
 
@@ -442,7 +427,6 @@ static void set_shader_from_id(wip24_state* state, const char* id) {
         set_shader_from_json(state, json, json_len);
         
         if (state->program) {
-            ensure_cache_dir();
             cached = fopen(cached_file, "w");
             fwrite(json, json_len, 1, cached);
             fclose(cached);
@@ -477,8 +461,6 @@ ENTRYPOINT void reshape_wip24(ModeInfo *mi, int width, int height) {
     wip24_state* state = states + MI_SCREEN(mi);
     glXMakeCurrent(MI_DISPLAY(mi), MI_WINDOW(mi), *(state->glx_context));
     glViewport(0, 0, width, height);
-    state->width = width;
-    state->height = height;
     
     glBindTexture(GL_TEXTURE_2D, state->fb_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width/state->undersample,
@@ -499,7 +481,6 @@ ENTRYPOINT void release_wip24(ModeInfo *mi) {
     free_texture_font(state->font);
     glXDestroyContext(MI_DISPLAY(mi), *state->glx_context);
     free(state->glx_context);
-    free(state->mode_info);
 }
 
 static void cleanup() {
@@ -536,10 +517,10 @@ static void init_shader(ModeInfo* mi, wip24_state* state) {
 ENTRYPOINT void init_wip24(ModeInfo *mi) {
     if (!states) {
         atexit(&cleanup);
-        state_count = MI_NUM_SCREENS(mi);
-        states = calloc(1, state_count*sizeof(wip24_state));
+        states = calloc(1, MI_NUM_SCREENS(mi)*sizeof(wip24_state));
         curl_global_init(CURL_GLOBAL_DEFAULT);
         log_entry("New process\n");
+        ensure_cache_dir();
     }
     
     log_entry("Begin initialization for screen %d\n", MI_SCREEN(mi));
@@ -666,7 +647,6 @@ ENTRYPOINT void draw_wip24(ModeInfo *mi) {
                         position,
                         credits);
     
-    glFinish();
     glXSwapBuffers(MI_DISPLAY(mi), MI_WINDOW(mi));
     
     state->time_delta = get_time() - frame_start;
