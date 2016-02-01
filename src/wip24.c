@@ -21,7 +21,6 @@
 
 #ifdef USE_GL
 typedef enum {channel_none, channel_image} wip24_channel_type;
-typedef enum {filter_linear, filter_nearest, filter_mipmap} wip24_filter;
 
 typedef struct {
     wip24_channel_type type;
@@ -30,10 +29,8 @@ typedef struct {
 
 typedef struct {
     GLXContext *glx_context;
-    ModeInfo* mode_info;
     GLuint program;
     wip24_channel channels[4];
-    int width, height;
     uint64_t start_time;
     uint64_t time_delta;
     unsigned int frame_count;
@@ -42,8 +39,7 @@ typedef struct {
     GLuint framebuffer;
     GLuint fb_texture;
     texture_font_data* font;
-    char shader_name[256];
-    char shader_author[256];
+    char shader_info[1024];
 } wip24_state;
 
 static const char* source_header = "uniform vec3 iResolution;\n" //Done
@@ -399,8 +395,8 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
     json_value* author = lookup_obj(info, "username");
     if (!name || !author) goto error;
     if (name->type!=json_string || author->type!=json_string) goto error;
-    strncpy(state->shader_name, name->u.string.ptr, 256);
-    strncpy(state->shader_author, author->u.string.ptr, 256);
+    snprintf(state->shader_info, sizeof(state->shader_info), "%s by %s",
+             name->u.string.ptr, author->u.string.ptr);
     
     json_value_free(root);
     return;
@@ -493,19 +489,18 @@ ENTRYPOINT Bool wip24_handle_event(ModeInfo *mi, XEvent *event) {
 }
 
 static void gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
-                              GLsizei length, const char *message, const void *userParam)
-{
+                              GLsizei length, const char *message, const void *user_param) {
     log_entry("OpenGL debug callback: %s\n", message);
 }
 
 static void init_shader(ModeInfo* mi, wip24_state* state) {
+    clear_shader(state);
+    
     state->start_time = get_time();
     state->time_delta = 0;
     state->frame_count = 0;
     state->undersample = state->undersamples[0] = state->undersamples[1] = 
     state->undersamples[2] = state->undersamples[3] = 1.0f;
-    for (unsigned int i = 0; i < 4; i++)
-        state->channels[i].type = channel_none;
     
     reshape_wip24(mi, MI_WIDTH(mi), MI_HEIGHT(mi));
     
@@ -528,7 +523,6 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
     wip24_state* state = states + MI_SCREEN(mi);
     
     state->glx_context = init_GL(mi);
-    state->mode_info = mi;
     state->program = 0;
     state->font = load_texture_font(MI_DISPLAY(mi), "fpsFont");
     
@@ -638,14 +632,10 @@ ENTRYPOINT void draw_wip24(ModeInfo *mi) {
     if (mi->fps_p)
         do_fps(mi);
     
-    char credits[1024];
-    snprintf(credits, sizeof(credits), "%s by %s", state->shader_name, state->shader_author);
     int position = get_boolean_resource(MI_DISPLAY(mi), "fpsTop", "FPSTop") ? 2 : 1;
     glColor3f(1, 1, 1);
-    print_texture_label(MI_DISPLAY(mi), state->font,
-                        MI_WIDTH(mi), MI_HEIGHT(mi),
-                        position,
-                        credits);
+    print_texture_label(MI_DISPLAY(mi), state->font, MI_WIDTH(mi), MI_HEIGHT(mi),
+                        position, state->shader_info);
     
     glXSwapBuffers(MI_DISPLAY(mi), MI_WINDOW(mi));
     
@@ -656,21 +646,14 @@ ENTRYPOINT void draw_wip24(ModeInfo *mi) {
     float current = state->time_delta / 1000000.0f;
     
     float* undersample = state->undersamples + state->frame_count%4;
-    if (current > (dest+1.0f)) {
-        *undersample += 0.1f;
-        goto reshape;
-    } else if (current<(dest-1.0f) && state->undersample>1.0f) {
-        *undersample -= 0.1f;
-        goto reshape;
-    }
+    if (current > (dest+1.0f)) *undersample += 0.1f;
+    else if (current<(dest-1.0f) && state->undersample>1.0f) *undersample -= 0.1f;
+    else goto no_reshape;
     
-    goto no_reshape;
-    
-    reshape:
-        state->undersample = (state->undersamples[0]+state->undersamples[1]+
-                              state->undersamples[2]+state->undersamples[3]) / 2.0f;
-        state->undersample = state->undersample>undersample_max ? undersample_max:state->undersample;
-        reshape_wip24(mi, MI_WIDTH(mi), MI_HEIGHT(mi));
+    state->undersample = (state->undersamples[0]+state->undersamples[1]+
+                          state->undersamples[2]+state->undersamples[3]) / 2.0f;
+    state->undersample = state->undersample>undersample_max ? undersample_max:state->undersample;
+    reshape_wip24(mi, MI_WIDTH(mi), MI_HEIGHT(mi));
     no_reshape:
         ;
     
