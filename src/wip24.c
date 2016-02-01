@@ -307,6 +307,7 @@ static void set_shader_source(wip24_state* state, const char* source) {
 }
 
 static json_value* lookup_obj(json_value* obj, const char* key) {
+    if (!obj) return NULL;
     if (obj->type != json_object) return NULL;
     
     for (unsigned int i = 0; i < obj->u.object.length; i++)
@@ -337,36 +338,22 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
     }
     
     json_value* shader = lookup_obj(root, "Shader");
-    if (!shader) goto error;
     
     json_value* renderpasses = lookup_obj(shader, "renderpass");
-    json_value* info = lookup_obj(shader, "info");
-    if (!renderpasses || !info) goto error;
+    if (!renderpasses) goto error;
     if (renderpasses->type != json_array) goto error;
     json_value* renderpass = NULL;
     for (unsigned int i = 0; (i<renderpasses->u.array.length)&&!renderpass; i++) {
         json_value* type = lookup_obj(renderpasses->u.array.values[i], "type");
-        if (type && type->type==json_string)
-            if (!strcmp(type->u.string.ptr, "image"))
-                renderpass = renderpasses->u.array.values[i];
+        if (type && type->type==json_string && !strcmp(type->u.string.ptr, "image"))
+            renderpass = renderpasses->u.array.values[i];
     }
-    if (!renderpass) goto error;
     
     json_value* code = lookup_obj(renderpass, "code");
     json_value* inputs = lookup_obj(renderpass, "inputs");
     if (!code || !inputs) goto error;
     if (code->type!=json_string || inputs->type!=json_array) goto error;
-    
-    char* source = calloc(1, code->u.string.length+1);
-    char* dest = source;
-    for (char* c = code->u.string.ptr; *c; c++) {
-        if (*c=='\\' && c[1]=='n')
-            *(dest++) = '\n';
-        else
-            *(dest++) = *c;
-    }
-    set_shader_source(state, source);
-    free(source);
+    set_shader_source(state, code->u.string.ptr);
     
     for (unsigned int i = 0; i < inputs->u.array.length; i++) {
         json_value* input = inputs->u.array.values[i];
@@ -374,25 +361,25 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
         json_value* ctype = lookup_obj(input, "ctype");
         json_value* channel = lookup_obj(input, "channel");
         json_value* sampler = lookup_obj(input, "sampler");
-        if (!src || !ctype || !channel || !sampler) goto error;
-        if (src->type!=json_string || ctype->type!=json_string || sampler->type!=json_object) goto error;
-        if (channel->type != json_integer && channel->type != json_double) goto error;
-        if (strcmp(ctype->u.string.ptr, "texture")) goto error;;
         json_value* filter = lookup_obj(sampler, "filter");
         json_value* wrap = lookup_obj(sampler, "wrap");
         json_value* vflip = lookup_obj(sampler, "vflip");
         json_value* srgb = lookup_obj(sampler, "srgb");
-        if (!filter || !wrap || !vflip || !srgb) goto error;
-        if (filter->type!=json_string || wrap->type!=json_string ||
-             vflip->type!=json_string || srgb->type!=json_string) goto error;
+        if (!src || !ctype || !channel || !sampler || !filter || !wrap ||
+            !vflip || !srgb) goto error;
+        if (src->type!=json_string || ctype->type!=json_string || srgb->type!=json_string ||
+            filter->type!=json_string || wrap->type!=json_string || vflip->type!=json_string ||
+            sampler->type!=json_object) goto error;
+        if (channel->type != json_integer && channel->type != json_double) goto error;
+        if (strcmp(ctype->u.string.ptr, "texture")) goto error;;
         json_int_t channel_idx = channel->type==json_integer?channel->u.integer:channel->u.dbl;
         if (channel_idx<0 || channel_idx>3) goto error;
         load_texture(state->channels+channel_idx, src->u.string.ptr, filter->u.string.ptr,
                      wrap->u.string.ptr, vflip->u.string.ptr, srgb->u.string.ptr);
     }
     
-    json_value* name = lookup_obj(info, "name");
-    json_value* author = lookup_obj(info, "username");
+    json_value* name = lookup_obj(lookup_obj(shader, "info"), "name");
+    json_value* author = lookup_obj(lookup_obj(shader, "info"), "username");
     if (!name || !author) goto error;
     if (name->type!=json_string || author->type!=json_string) goto error;
     snprintf(state->shader_info, sizeof(state->shader_info), "%s by %s",
@@ -537,7 +524,6 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
     glBindFramebuffer(GL_FRAMEBUFFER, state->framebuffer);
     glBindTexture(GL_TEXTURE_2D, state->fb_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                            GL_TEXTURE_2D, state->fb_texture, 0);
     glEnable(GL_TEXTURE_2D);
@@ -552,7 +538,7 @@ static void update_uniforms(ModeInfo* mi, wip24_state* state) {
     glUniform3f(loc, MI_WIDTH(mi)/state->undersample, MI_HEIGHT(mi)/state->undersample, 1.0f);
     
     loc = glGetUniformLocation(state->program, "iGlobalTime");
-    glUniform1f(loc, (get_time() - state->start_time) / 1000000000.0f);
+    glUniform1f(loc, (get_time()-state->start_time) / 1000000000.0f);
     
     loc = glGetUniformLocation(state->program, "iTimeDelta");
     glUniform1f(loc, state->time_delta);
@@ -629,13 +615,11 @@ ENTRYPOINT void draw_wip24(ModeInfo *mi) {
     glVertex2f(-1.0f, 1.0f);
     glEnd();
     
-    if (mi->fps_p)
-        do_fps(mi);
+    if (mi->fps_p) do_fps(mi);
     
-    int position = get_boolean_resource(MI_DISPLAY(mi), "fpsTop", "FPSTop") ? 2 : 1;
-    glColor3f(1, 1, 1);
     print_texture_label(MI_DISPLAY(mi), state->font, MI_WIDTH(mi), MI_HEIGHT(mi),
-                        position, state->shader_info);
+                        get_boolean_resource(MI_DISPLAY(mi), "fpsTop", "FPSTop")?2:1,
+                        state->shader_info);
     
     glXSwapBuffers(MI_DISPLAY(mi), MI_WINDOW(mi));
     
@@ -657,8 +641,7 @@ ENTRYPOINT void draw_wip24(ModeInfo *mi) {
     no_reshape:
         ;
     
-    if (dest > current) mi->pause = dest - current;
-    else mi->pause = 0;
+    mi->pause = dest>current ? dest-current : 0;
     
     if ((get_time() - state->start_time)/1000000000.0f > shader_duration)
         init_shader(mi, state);
