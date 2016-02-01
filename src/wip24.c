@@ -3,8 +3,6 @@
 
 #define API_KEY "ftntwN"
 
-//#define MOUSE_INPUT
-
 #include <stdint.h>
 #include <stdbool.h>
 #define GL_GLEXT_PROTOTYPES
@@ -39,7 +37,6 @@ typedef struct {
     uint64_t start_time;
     uint64_t time_delta;
     unsigned int frame_count;
-    int mouse_x, mouse_y;
     float undersample;
     float undersamples[4];
     GLuint framebuffer;
@@ -442,12 +439,15 @@ static void set_shader_from_id(wip24_state* state, const char* id) {
         size_t json_len;
         read_data(url, (void**)&json, &json_len);
         if (!json) return;
-        ensure_cache_dir();
-        cached = fopen(cached_file, "w");
-        fwrite(json, json_len, 1, cached);
-        fclose(cached);
-        
         set_shader_from_json(state, json, json_len);
+        
+        if (state->program) {
+            ensure_cache_dir();
+            cached = fopen(cached_file, "w");
+            fwrite(json, json_len, 1, cached);
+            fclose(cached);
+        }
+        
         free(json);
     } else {
         fseek(cached, 0, SEEK_END);
@@ -573,22 +573,6 @@ ENTRYPOINT void init_wip24(ModeInfo *mi) {
 }
 
 static void update_uniforms(ModeInfo* mi, wip24_state* state) {
-    #if MOUSE_INPUT
-    int mouse_x, mouse_y;
-    unsigned int mouse_mask;
-    Window _window;
-    int _int;
-    XQueryPointer(MI_DISPLAY(mi), MI_WINDOW(mi), &_window, &_window,
-                  &_int, &_int, &mouse_x, &mouse_y, &mouse_mask);
-    if (mouse_mask) {
-        state->mouse_x = mouse_x;
-        state->mouse_y = mouse_y;
-    }
-    #else
-    state->mouse_x = state->mouse_y = 0;
-    unsigned int mouse_mask = 0;
-    #endif
-    
     GLint loc = glGetUniformLocation(state->program, "iResolution");
     glUniform3f(loc, MI_WIDTH(mi)/state->undersample, MI_HEIGHT(mi)/state->undersample, 1.0f);
     
@@ -602,9 +586,7 @@ static void update_uniforms(ModeInfo* mi, wip24_state* state) {
     glUniform1i(loc, state->frame_count);
     
     loc = glGetUniformLocation(state->program, "iMouse");
-    glUniform4f(loc, state->mouse_x/state->undersample,
-                (MI_HEIGHT(mi)-state->mouse_y-1)/state->undersample,
-                mouse_mask?1.0f:0.0f, mouse_mask?1.0f:0.0f);
+    glUniform4f(loc, 0.0f, (MI_HEIGHT(mi)-1)/state->undersample, 0.0f, 0.0f);
     
     static const char* channels[] = {"iChannel0", "iChannel1", "iChannel2", "iChannel3"};
     static const char* channelsRes1[] = {"iChannel[0].resolution", "iChannel[1].resolution",
