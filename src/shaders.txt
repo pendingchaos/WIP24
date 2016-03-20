@@ -1,6 +1,6 @@
 #Ms2SD1 Disabled because of a "Shader not found" error.
-#Xtf3Rn Same error
-#XsXXDn Shader not found again
+#Xtf3Rn Shader not found
+#XsXXDn Shader not found
 #XsfGWN Shader not found
 #Mds3Rn Shader not found
 #4lBXDt Shader not found
@@ -9,7 +9,39 @@
 #XtX3zj Shader not found
 #Xlf3Rj Shader not found
 #XtfGzj Shader not found These last couple all seem to be Kali's
-#XtsSWs Unable to link program
+#4dV3Dh Shader not found
+#XsjXRm Shader not found
+#ldSSzV Shader not found
+#XlsGRs Shader not found
+#Mdl3Rr Shader not found
+#MtX3Ws Shader not found
+#MsjSW3 Shader not found
+#4sSSWz Shader not found
+#lss3WS Shader not found
+#Msf3D7 Shader not found
+#MdXGDr Shader not found
+#4sl3Dr Shader not found
+#MdXXW2 Shader not found
+#Xs2GDd Shader not found
+#MsX3RH Shader not found
+#lslGWr Shader not found
+#MsSGD1 Shader not found
+#4sKGWt Shader not found
+#4dVGDt Shader not found
+#MsV3Wt Shader not found
+#MsKGWt Shader not found
+#MdV3Dd Shader not found
+#MdK3Wd Shader not found
+#ldV3Wd Shader not found
+#4ljXWh Shader not found
+#XtsSWs Cubemaps currently not supported
+#4sjSW1 Compilation error
+#MsK3Wt Compilation error
+#Mst3Wr Too slow
+#MtBGRt Uses unsupported features
+#4dKGDt Uses unsupported features
+#4sK3Dt Uses unsupported features
+#Xs3Xzn Uses unsupported features
 ld3Gz2
 XslGRr
 XsX3RB
@@ -34,3 +66,7 @@ lsf3zr
 Mss3zM
 4djGWR
 4sX3Rn
+llj3Rz
+Xd2GR3
+ldVGWt
+ldKGDd

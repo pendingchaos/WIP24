@@ -11,7 +11,6 @@
 #include <sys/stat.h>
 #include <pwd.h>
 #include <stdarg.h>
-#include <stdarg.h>
 #include <errno.h>
 
 #include "stb_image.h"
@@ -42,21 +41,21 @@ typedef struct {
     char shader_info[1024];
 } wip24_state;
 
-static const char* source_header = "uniform vec3 iResolution;\n" //Done
-                                   "uniform float iGlobalTime;\n" //Done
-                                   "uniform float iChannelTime[4];\n" //Done
-                                   "uniform vec4 iMouse;\n" //Done
-                                   "uniform vec4 iDate;\n" //Done
+static const char* source_header = "uniform vec3 iResolution;\n"
+                                   "uniform float iGlobalTime;\n"
+                                   "uniform float iChannelTime[4];\n"
+                                   "uniform vec4 iMouse;\n"
+                                   "uniform vec4 iDate;\n"
                                    "uniform float iSampleRate;\n"
-                                   "uniform vec3 iChannelResolution[4];\n" //Done
-                                   "uniform int iFrame;\n" //Done
-                                   "uniform float iTimeDelta;\n" //Done
+                                   "uniform vec3 iChannelResolution[4];\n"
+                                   "uniform int iFrame;\n"
+                                   "uniform float iTimeDelta;\n"
                                    "struct Channel {vec3 resolution; float time;};\n"
-                                   "uniform Channel iChannel[4];\n" //Done
-                                   "uniform sampler2D iChannel0;\n" //Done
-                                   "uniform sampler2D iChannel1;\n" //Done
-                                   "uniform sampler2D iChannel2;\n" //Done
-                                   "uniform sampler2D iChannel3;\n" //Done
+                                   "uniform Channel iChannel[4];\n"
+                                   "uniform sampler2D iChannel0;\n"
+                                   "uniform sampler2D iChannel1;\n"
+                                   "uniform sampler2D iChannel2;\n"
+                                   "uniform sampler2D iChannel3;\n"
                                    "void mainImage(out vec4 fragColor, in vec2 fragCoord);\n"
                                    "#define texture2DLodEXT(sampler, p, lod) texture2D(sampler, p)\n"
                                    "#define texture2DGradEXT(sampler, p, dPdx, dPdy) texture2D(sampler, p)\n"
