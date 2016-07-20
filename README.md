@@ -1,5 +1,5 @@
 # WIP24
-A XScreensaver screensaver that displays shaders from [shadertoy.com](https://shadertoy.com).
+A XScreensaver screensaver that displays some shaders from [shadertoy.com](https://shadertoy.com).
 
 # Dependencies
 - XScreensaver
@@ -23,7 +23,7 @@ By default, the shader list is empty. Run
 ```shell
 ./install_shaders.sh
 ```
-to install one. The list is stored in ~/.wip24/shaders.txt
+to install the list in src/shaders.txt. The installed list is stored in ~/.wip24/shaders.txt
 
 # Uninstallation
 ```shell
