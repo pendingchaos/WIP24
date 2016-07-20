@@ -19,6 +19,8 @@ dnf install xscreensaver mesa-libGL-devel libcurl-devel gcc
 make
 make install
 ```
+It will download XScreensaver 5.35's source code if it has not already.
+
 By default, the shader list is empty. Run
 ```shell
 ./install_shaders.sh
