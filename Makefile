@@ -15,6 +15,7 @@ base_obj = $(src:.c=.o)
 obj = $(join $(dir $(base_obj)), $(addprefix ., $(notdir $(base_obj))))
 dep = $(obj:.o=.d)
 
+.PHONY: build
 build:
 	make $(XSS_DIR)README
 	make wip24
@@ -38,18 +39,25 @@ $(XSS_DIR)README:
 	tar -xzf .xscreensaver.tar.gz
 	rm .xscreensaver.tar.gz
 
+.PHONY: clean
 clean:
 	rm -f $(dep) $(obj) wip24
 	rm -f -r xscreensaver-5.34
 
+.PHONY: install
 install:
 	cp wip24 /usr/libexec/xscreensaver/wip24
 	cp src/wip24.xml /usr/share/xscreensaver/config/wip24.xml
 	cp src/wip24.conf /usr/share/xscreensaver/hacks.conf.d/wip24.conf
 	update-xscreensaver-hacks
 
+.PHONY: uninstall
 uninstall:
 	rm -f /usr/libexec/xscreensaver/wip24
 	rm -f /usr/share/xscreensaver/config/wip24.xml
 	rm -f /usr/share/xscreensaver/hacks.conf.d/wip24.conf
 	update-xscreensaver-hacks
+
+.PHONY: full-uninstall
+full-uninstall: uninstall
+	rm -r ~/.wip24

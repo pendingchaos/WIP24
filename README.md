@@ -19,15 +19,18 @@ dnf install xscreensaver mesa-libGL-devel libcurl-devel gcc
 make
 make install
 ```
-It will download XScreensaver 5.35's source code if it has not already.
+It will download XScreensaver 5.35's source code if it has not already. This may print a lot of text to stdout.
 
-By default, the shader list is empty. Run
+Before running, the should be a list of shaders at ~/.wip24/shaders.txt.
 ```shell
 ./install_shaders.sh
 ```
-to install the list in src/shaders.txt. The installed list is stored in ~/.wip24/shaders.txt
+to copy src/shaders.txt to ~/.wip24/shaders.txt (this overwrites any previous list).
 
 # Uninstallation
 ```shell
 make uninstall
-```
+``` to uninstall the screensaver.
+```shell
+make full-uninstall
+``` to uninstall the screensaver and delete ~/.wip24/.
