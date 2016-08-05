@@ -30,7 +30,10 @@ to copy src/shaders.txt to ~/.wip24/shaders.txt (this overwrites any previous li
 # Uninstallation
 ```shell
 make uninstall
-``` to uninstall the screensaver.
+```
+to uninstall the screensaver.
+
 ```shell
 make full-uninstall
-``` to uninstall the screensaver and delete ~/.wip24/.
+```
+to uninstall the screensaver and delete ~/.wip24/.
