@@ -1,4 +1,4 @@
-XSS_DIR = xscreensaver-5.35/
+XSS_DIR = xscreensaver-5.36/
 CFLAGS = -pedantic -Wall -std=c11 -U__STRICT_ANSI__ -I../../utils -I../ -I../../ -DSTANDALONE -DUSE_GL -DHAVE_CONFIG_H -g -I$(XSS_DIR)hacks/glx -I$(XSS_DIR) -I$(XSS_DIR)utils -I$(XSS_DIR)hacks `curl-config --cflags` `freetype-config --cflags`
 LDFLAGS = -lGL -lGLU -lpthread -lXft -lXt -lX11 -lXmu -lm `curl-config --libs`
 
@@ -35,7 +35,7 @@ $(XSS_DIR)config.h:
 	cd $(XSS_DIR); ./configure $(XXS_CONFIG)
 
 $(XSS_DIR)README:
-	curl https://www.jwz.org/xscreensaver/xscreensaver-5.35.tar.gz > .xscreensaver.tar.gz
+	curl https://www.jwz.org/xscreensaver/xscreensaver-5.36.tar.gz > .xscreensaver.tar.gz
 	tar -xzf .xscreensaver.tar.gz
 	rm .xscreensaver.tar.gz
 
