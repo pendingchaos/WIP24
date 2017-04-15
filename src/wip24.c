@@ -96,7 +96,7 @@ static void ensure_cache_dir() {
     mkdir(dir, S_IRWXU);
     strcat(dir, "/cache");
     mkdir(dir, S_IRWXU);
-    strcat(dir, "/presets");
+    strcat(dir, "/images");
     mkdir(dir, S_IRWXU);
     
     strcpy(dir, get_home_dir());
@@ -203,8 +203,10 @@ static void load_texture(wip24_channel* channel, const char* src,
                          const char* vflip, const char* srgb) {
     glDeleteTextures(1, &channel->texture);
     
-    char cached_file[4096];
-    snprintf(cached_file, sizeof(cached_file), "%s/.wip24/cache%s", get_home_dir(), src);
+    char cached_file[4096] = {0};
+    snprintf(cached_file, sizeof(cached_file), "%s/.wip24/cache/images/", get_home_dir());
+    for (const char* c = src; *c && strlen(cached_file)+1<sizeof(cached_file); c++)
+        cached_file[strlen(cached_file)] = *c=='/' ? '_' : *c;
     FILE* cached = fopen(cached_file, "rb");
     if (!cached) {
         char url[2048];
@@ -227,25 +229,27 @@ static void load_texture(wip24_channel* channel, const char* src,
         goto error;
     }
     
-    if (!strcmp(vflip, "true"))
-        for (unsigned int y = 0; y < h; y++)
+    if (!strcmp(vflip, "true")) {
+        for (unsigned int y = 0; y < h; y++) {
             for (unsigned int x = 0; x < w; x++) {
                 int temp = ((int*)data)[y*w+x];
                 ((int*)data)[y*w+x] = ((int*)data)[(h-y-1)*w+x];
                 ((int*)data)[(h-y-1)*w+x] = temp;
             }
+        }
+    }
     
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
     
     if (!strcmp(filter, "mipmap")) {
-        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    } else if (strcmp(filter, "linear")) {
+    } else if (!strcmp(filter, "linear")) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
     
@@ -316,7 +320,7 @@ static json_value* lookup_obj(json_value* obj, const char* key) {
     return NULL;
 }
 
-static void set_shader_from_json(wip24_state* state, const char* json, size_t json_len) {
+static bool set_shader_from_json(wip24_state* state, const char* json, size_t json_len) {
     glDeleteProgram(state->program);
     state->program = 0;
     
@@ -357,7 +361,7 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
     for (unsigned int i = 0; i < inputs->u.array.length; i++) {
         json_value* input = inputs->u.array.values[i];
         json_value* src = lookup_obj(input, "src");
-        json_value* ctype = lookup_obj(input, "ctype");
+        json_value* ctype = lookup_obj(input, "type");
         json_value* channel = lookup_obj(input, "channel");
         json_value* sampler = lookup_obj(input, "sampler");
         json_value* filter = lookup_obj(sampler, "filter");
@@ -370,7 +374,7 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
             filter->type!=json_string || wrap->type!=json_string || vflip->type!=json_string ||
             sampler->type!=json_object) goto error;
         if (channel->type != json_integer && channel->type != json_double) goto error;
-        if (strcmp(ctype->u.string.ptr, "texture")) goto error;;
+        if (strcmp(ctype->u.string.ptr, "texture")) goto unsupported;
         json_int_t channel_idx = channel->type==json_integer?channel->u.integer:channel->u.dbl;
         if (channel_idx<0 || channel_idx>3) goto error;
         load_texture(state->channels+channel_idx, src->u.string.ptr, filter->u.string.ptr,
@@ -385,14 +389,20 @@ static void set_shader_from_json(wip24_state* state, const char* json, size_t js
              name->u.string.ptr, author->u.string.ptr);
     
     json_value_free(root);
-    return;
+    return true;
     error:
         if (root) json_value_free(root);
         clear_shader(state);
         log_entry("Unable to interpret JSON.\n");
+        return false;
+    unsupported:
+        if (root) json_value_free(root);
+        clear_shader(state);
+        log_entry("Shader uses an unsupported feature.\n");
+        return false;
 }
 
-static void set_shader_from_id(wip24_state* state, const char* id) {
+static bool set_shader_from_id(wip24_state* state, const char* id) {
     log_entry("Setting shader to %s\n", id);
     
     char cached_file[4096];
@@ -405,8 +415,8 @@ static void set_shader_from_id(wip24_state* state, const char* id) {
         char* json;
         size_t json_len;
         read_data(url, (void**)&json, &json_len);
-        if (!json) return;
-        set_shader_from_json(state, json, json_len);
+        if (!json) return false;
+        if (!set_shader_from_json(state, json, json_len)) return false;
         
         if (state->program) {
             cached = fopen(cached_file, "w");
@@ -424,7 +434,7 @@ static void set_shader_from_id(wip24_state* state, const char* id) {
         memset(json, 0, size);
         fread(json, 1, size, cached);
         
-        set_shader_from_json(state, json, size);
+        if (!set_shader_from_json(state, json, size)) return false;
         free(json);
         
         fclose(cached);
@@ -437,6 +447,7 @@ static void set_shader_from_id(wip24_state* state, const char* id) {
             log_entry("Removing cached shader %s\n", id);
         }
     }
+    return true;
 }
 
 ENTRYPOINT void reshape_wip24(ModeInfo *mi, int width, int height) {
@@ -490,9 +501,15 @@ static void init_shader(ModeInfo* mi, wip24_state* state) {
     
     reshape_wip24(mi, MI_WIDTH(mi), MI_HEIGHT(mi));
     
-    const char* id = pick_shader_id();
-    if (id) set_shader_from_id(state, id);
-    else log_entry("Unable to pick a shader\n");
+    for (size_t i = 0; i < 16; i++) {
+        const char* id = pick_shader_id();
+        if (!id) {
+            log_entry("Unable to pick a shader\n");
+            return;
+        }
+        if (set_shader_from_id(state, id)) return; 
+    }
+    log_entry("Unable to set a shader\n");
 }
 
 ENTRYPOINT void init_wip24(ModeInfo *mi) {

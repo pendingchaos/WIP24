@@ -1,6 +1,6 @@
 XSS_DIR = xscreensaver-5.36/
-CFLAGS = -pedantic -Wall -std=c11 -U__STRICT_ANSI__ -I../../utils -I../ -I../../ -DSTANDALONE -DUSE_GL -DHAVE_CONFIG_H -g -I$(XSS_DIR)hacks/glx -I$(XSS_DIR) -I$(XSS_DIR)utils -I$(XSS_DIR)hacks `curl-config --cflags` `freetype-config --cflags`
-LDFLAGS = -lGL -lGLU -lpthread -lXft -lXt -lX11 -lXmu -lm `curl-config --libs`
+CFLAGS = -pedantic -Wall -std=c11 -U__STRICT_ANSI__ -I../../utils -I../ -I../../ -DSTANDALONE -DUSE_GL -DHAVE_CONFIG_H -g -I$(XSS_DIR)hacks/glx -I$(XSS_DIR) -I$(XSS_DIR)utils -I$(XSS_DIR)hacks `curl-config --cflags` `freetype-config --cflags` -g
+LDFLAGS = -lGL -lGLU -lpthread -lXft -lXt -lX11 -lXmu -lm `curl-config --libs` -g
 
 src = src/wip24.c src/json.c src/stb_image.c $(XSS_DIR)hacks/fps.c \
 	  $(XSS_DIR)hacks/glx/fps-gl.c $(XSS_DIR)utils/resources.c \

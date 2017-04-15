@@ -46,7 +46,7 @@
 ld3Gz2
 XslGRr
 XsX3RB
-MdX3Rr
+#MdX3Rr Uses unsupported features
 MdlGW7
 XdsGDB
 4dfGzs
@@ -54,7 +54,7 @@ MdBGzG
 ldl3W8
 XtlSD7
 ldXXDj
-ldsGWB
+#ldsGWB Shader not found - does not seem to work with shadertoy.com/view/
 4sS3zG
 MdfGRX
 ldl3zN
@@ -65,7 +65,7 @@ ldj3Dm
 lsf3zr
 4dSGW1
 Mss3zM
-4djGWR
+#4djGWR Too slow
 4sX3Rn
 llj3Rz
 Xd2GR3
